@@ -143,6 +143,35 @@ class Browser extends EventEmitter
 
     # Evaulate in context of window. This can be called with a script (String) or a function.
     newWindow._evaluate = (code, filename)->
+
+      if (match = /^\s*\/\/\<\!\[CDATA\[([\s\S]*)\/\/\]\]\>\s*$/g.exec(code))
+        # extract code wrapped in CDATA xml comment tags (a workaround for very old browsers, still used by Asp.Net WebForms)
+        code = match[1]
+
+      #FIX: quick&dirty fix for allowing this syntax: document.forms[formname]
+      if (code.indexOf('document.forms[') >= 0)
+        # replace document.forms[name] with document.getElementByName(name)
+        code = code.replace(/document\.forms\[([\"\'][A-Za-z][^\]]+)\]/g,'document.getElementById($1)')
+
+      #FIX: Fix references to form fields in Asp.Net WebForms using: theForm.fieldId
+      if (code.indexOf('theForm.') >= 0)
+        # replace theForm._FIELDID with document.getElementById(_FIELDID)
+        code = code.replace(/theForm\.(_[_\-A-Za-z0-9]+)/g,'document.getElementById(\'$1\')')
+
+      #FIX: Illegal return statement (return outside of a function), wrap in a function
+      if (match = /^\s*return/g.exec(code))
+        console.log('return statement out of function: #{code}')
+        console.log('  => wrapping')
+        code = '(function(){\n'+code+'\n})();'
+
+      #FIX: Avoid loading resource multiple times
+      #if (!newWindow.document.loadedResources)
+      #  newWindow.document.loadedResources = {}
+      #if (newWindow.document.loadedResources[filename+':'+code])
+      #  console.log('avoided loading '+filename+' again')
+      #  return
+      #newWindow.document.loadedResources[filename+':'+code] = true
+
       if typeof code == "string" || code instanceof String
         newWindow.run code, filename
       else

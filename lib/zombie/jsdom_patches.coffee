@@ -14,7 +14,9 @@ HTML.HTMLElement.prototype.__defineGetter__ "offsetHeight", -> 100
 HTML.HTMLAnchorElement.prototype._eventDefaults =
   click: (event)->
     anchor = event.target
-    anchor.ownerDocument.parentWindow.location = anchor.href if anchor.href
+    console.log("\n\nclick on anchor #{anchor}\n    onclick: #{anchor.getAttribute('onclick')}\n    href: #{anchor.href}\n\n");
+    if !anchor.getAttribute('onclick')
+      anchor.ownerDocument.parentWindow.location = anchor.href if anchor.href
 
 
 # Fix resource loading to keep track of in-progress requests. Need this to wait

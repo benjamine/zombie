@@ -47,6 +47,11 @@ class History
   # Called when we switch to a new page with the URL of the old page.
   _pageChanged: (was)->
     url = @_stack[@_index]?.url
+
+    washref = if was then was.href else '<null>'
+    console.log("\n\nURL CHANGED FROM: #{washref}\n    TO: #{url.href}\n");
+    console.trace();
+
     if !was || was.host != url.host || was.pathname != url.pathname || was.query != url.query
       # We're on a different site or different page, load it
       @_resource url
@@ -63,6 +68,7 @@ class History
   # submit forms, see _loadPage and _submit.
   _resource: (url, method, data, headers)->
     method = (method || "GET").toUpperCase()
+
     unless url.protocol == "file:" || (url.protocol && url.hostname)
       throw new Error("Cannot load resource: #{URL.format(url)}")
 
@@ -99,6 +105,8 @@ class History
     referer = @_browser.referer || @_stack[@_index-1]?.url?.href
     headers["referer"] = referer if referer
 
+    console.log('\n NEW REQUEST: '+method+' '+url.href+'\n');
+
     if credentials = @_browser.credentials
       switch credentials.scheme.toLowerCase()
         when "basic"
@@ -110,6 +118,12 @@ class History
           headers["authorization"] = "OAuth #{credentials.token}"
     
     @_browser.resources.request method, url, data, headers, (error, response)=>
+
+      #FIX: sometimes (maybe after post & redirect) document is different from browser document reference
+	  # Obsolete fix?
+      #if document != @_browser.document
+      #  document = @_browser.document
+
       if error
         document.write "<html><body>#{error}</body></html>"
         document.close()
@@ -185,6 +199,12 @@ class History
   # Location uses this to move to a new URL.
   _assign: (url)->
     url = @_resolve(url)
+
+    # 'javascript:' protocol, execute following code (no resource loading)
+    if url.indexOf("javascript:")==0
+      @_browser.evaluate(url.substr("javascript:".length))
+      return
+
     was = @_stack[@_index]?.url # before we destroy stack
     @_stack = @_stack[0..@_index]
     @_stack[++@_index] = new Entry(this, url)

@@ -164,6 +164,18 @@ class Resources extends Array
         callback new Error("Cannot #{method} a file: URL")
       return
 
+    # use credentials for requesting resources in the same domain
+    if url.host == URL.parse(this._browser.location).host && credentials = this._browser.credentials
+      headers = if headers then headers else {}
+      switch credentials.scheme.toLowerCase()
+        when "basic"
+          base64 = new Buffer(credentials.user + ":" + credentials.password).toString("base64")
+          headers["authorization"] = "Basic #{base64}"
+        when "bearer"
+          headers["authorization"] = "Bearer #{credentials.token}"
+        when "oauth"
+          headers["authorization"] = "OAuth #{credentials.token}"
+
     # Clone headers before we go and modify them.
     headers = if headers then JSON.parse(JSON.stringify(headers)) else {}
     headers["User-Agent"] = @_browser.userAgent
